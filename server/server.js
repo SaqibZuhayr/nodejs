@@ -75,6 +75,19 @@ app.post('/questions',(req,res)=>{
     res.status(400).send(err);
 })
 });
+//method for fetching answers
+app.post('/answers',(req,res)=>{
+
+    //console.log('asdasd')
+    //console.log(req.body.questionID);
+    Question.find({'_id':req.body.questionID}).then((doc)=>{
+        console.log();
+        res.send(doc);
+},(err)=>{
+    res.status(400).send(err);
+})
+});
+
 
 
 
