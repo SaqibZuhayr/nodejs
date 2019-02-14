@@ -3,6 +3,7 @@ var bodyParser = require('body-parser');
 
 var {mongoose} = require('./db/mongoose');
 var {User}=require('./models/user');
+var {Question} = require('./models/question');
 
 var app= express();
 
@@ -62,6 +63,21 @@ console.log(req.body.email);
     res.status(400).send(err);
 })
 });
+//method for fetching questions
+app.post('/questions',(req,res)=>{
+
+    //console.log('asdasd')
+    
+    Question.find({}).then((doc)=>{
+        console.log(doc);
+        res.send(doc);
+},(err)=>{
+    res.status(400).send(err);
+})
+});
+
+
+
 
 //method for updating object
 app.post('/update',(req,res)=>{
