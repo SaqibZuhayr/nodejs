@@ -41,16 +41,16 @@ app.post('/user',(req,res)=>{
 });
 
 //method for deleting contact
-app.post('/delete',(req,res)=>{
-    //mongoose method for deleting object from db
-    Contact.findByIdAndRemove(req.body.id).then((doc)=>{
-        //returning deleted object to user
-        res.send(doc);
-},(err)=>{
-    res.status(400).send(err);
-})
-});
-
+// app.post('/delete',(req,res)=>{
+//     //mongoose method for deleting object from db
+//     Contact.findByIdAndRemove(req.body.id).then((doc)=>{
+//         //returning deleted object to user
+//         res.send(doc);
+// },(err)=>{
+//     res.status(400).send(err);
+// })
+// });
+//User login authentication
 app.post('/user/auth',(req,res)=>{
     //mongoose method for deleting object from db
 //console.log(req.body.email);
@@ -88,41 +88,61 @@ app.post('/answers',(req,res)=>{
 })
 });
 
+//method for posting question
+app.post('/postquestion',(req,res)=>{
 
-
-
-
-//method for updating object
-app.post('/update',(req,res)=>{
-    //mongoose method for finding object by id and then updating it
-    Contact.findByIdAndUpdate(req.body.id,{$set : { name : req.body.name,email : req.body.email,phone : req.body.phone}},{new : true}).then((doc)=>{ 
-        //sending updated object to user
-        res.send({contact : doc});
-},(err)=>{
-    res.status(400).send(err);
-})
-});
-
-//method for finding single contact by id
-app.post('/Singleuser',(req,res)=>{
-    //mongoose method for finding object by id
-    Contact.findById(req.body.id).then((doc)=>{
-            //sending obj to user
-            res.send({contact : doc});
-    },(err)=>{
-        res.status(400).send(err);
-    })
-});
-
-//method for listing object
-app.get('/user',(req,res)=>{
-    Contact.find().then((doc)=>{
-            //returning object to user
+    //console.log('asdasd')
+    //console.log(req.body.questionID);
+    var question = new Question({
+        question :  req.body.question,
+        user_id : '5c095910aca26c1254be01ff',
+        category :   req.body.category
+        
+    });
+    //saving contact to db
+    question.save().then((doc)=>{
+            //returning new object to user
             res.status(200).send(doc);
     },(err)=>{
         res.status(400).send(err);
     })
 });
+
+
+
+
+
+//method for updating object
+// app.post('/update',(req,res)=>{
+//     //mongoose method for finding object by id and then updating it
+//     Contact.findByIdAndUpdate(req.body.id,{$set : { name : req.body.name,email : req.body.email,phone : req.body.phone}},{new : true}).then((doc)=>{ 
+//         //sending updated object to user
+//         res.send({contact : doc});
+// },(err)=>{
+//     res.status(400).send(err);
+// })
+// });
+
+//method for finding single contact by id
+// app.post('/Singleuser',(req,res)=>{
+//     //mongoose method for finding object by id
+//     Contact.findById(req.body.id).then((doc)=>{
+//             //sending obj to user
+//             res.send({contact : doc});
+//     },(err)=>{
+//         res.status(400).send(err);
+//     })
+// });
+
+//method for listing object
+// app.get('/user',(req,res)=>{
+//     Contact.find().then((doc)=>{
+//             //returning object to user
+//             res.status(200).send(doc);
+//     },(err)=>{
+//         res.status(400).send(err);
+//     })
+// });
 
 
 app.listen(3000,()=>{
