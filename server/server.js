@@ -66,13 +66,14 @@ app.post('/user/auth', (req, res) => {
 //method for fetching questions
 app.post('/questions', (req, res) => {
 
-    //console.log('asdasd')
+    console.log('asdasd')
     let arr = [];
     Question.find({}).then((doc) => {
 
         doc.forEach(element => {
-            User.findOne({ '_id': element.user_id }).then((user) => {
-                arr.push({ question: element, user: { 'username': user.username } })
+            console.log(element);
+            User.findOne({_id: element.user_id }).then((user) => {
+                arr.push({ question: element, user: { 'username': user.username } });
                 if (doc.length == arr.length) {
                     res.send(arr);
                 }
@@ -87,11 +88,11 @@ app.post('/questions', (req, res) => {
 });
 //method for fetching answers
 app.post('/answers', (req, res) => {
-
+    let arr = [];
     //console.log('asdasd')
     //console.log(req.body.questionID);
     Question.find({ '_id': req.body.questionID }).then((doc) => {
-        console.log();
+        console.log(doc);
         res.send(doc);
     }, (err) => {
         res.status(400).send(err);
@@ -100,12 +101,12 @@ app.post('/answers', (req, res) => {
 
 //method for posting question
 app.post('/postquestion', (req, res) => {
-
+   console.log(req.body.userid);
     //console.log('asdasd')
     //console.log(req.body.questionID);
     var question = new Question({
         question: req.body.question,
-        user_id: '5c095910aca26c1254be01ff',
+        user_id: req.body.userid,
         category: req.body.category
 
     });
@@ -124,17 +125,69 @@ app.post('/postanswer', (req, res) => {
     //console.log('asdasd')
     //console.log(req.body.questionID);
     //saving answer to db
-    Question.updateOne(
-        { '_id': req.body.questionID },
-        { $push: { answer: { answer: req.body.answer, user_id: req.body.questionID, rating: { approved: false, score: 0 } } } },
-        { returnOriginal: false }
+    const answer = {
+        answer : req.body.answer,
+        user_id : req.body.userid, 
+    }
+    Question.findOne(
+        {_id: req.body.questionID }
     ).then((doc) => {
+        console.log(doc);
+        doc.answer.push(answer);
+        doc.save((err) => {
+            if(err){
+                res.status(400).send(err);
+            }
+            else{
+                console.log("saved");
+            }
+
+        });
         res.send(doc);
     }, (err) => {
         res.status(400).send(err);
     })
 });
 
+//method for fetching Jobs
+app.post('/viewjobs', (req, res) => {
+    let arr=[];
+    User.find({}).then((doc) => {
+        doc.forEach(element => {
+            element.jobs.forEach(element1 => {
+                arr.push(element1)
+            });
+
+        });
+        res.send(arr);
+    }, (err) => {
+        res.status(400).send(err);
+    })
+});
+
+//method for posting jobs
+app.post('/postjobs', (req, res) => {
+    console.log(req.body.userid);
+    User.findOne(
+        {_id: req.body.userid }
+    ).then((doc) => {
+        console.log(doc);
+        doc.jobs.push(req.body.job);
+        doc.save((err) => {
+            if(err){
+                res.status(400).send(err);
+            }
+            else{
+                console.log("saved");
+            }
+
+        });
+        res.send(doc);
+    }, (err) => {
+        res.status(400).send(err);
+    })
+    
+});
 
 
 

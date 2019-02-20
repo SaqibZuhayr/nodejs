@@ -49,9 +49,18 @@ var User = new Schema({
        id : String
    }],
    jobs : [{
-        title : String,
+        organization : String,
         category : String,
+        title : String,
         details : String,
+        skills : String,
+        location : String,
+        lastDate : String,
+        minSalary : String,
+        maxSalary : String,
+        careerLevel : String,
+        degreeLevel : String,
+        experience : String,
         applied : [{
             user_id:String
         }]
