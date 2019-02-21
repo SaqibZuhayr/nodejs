@@ -6,9 +6,7 @@ var Gigs = new Schema({
     userid : String,
     title : String,
     description : String,
-    photos : [{
-        picture_path : String
-    }],
+    photo : String,
     rate : String,
     reviews : [{
         order_id : String,
