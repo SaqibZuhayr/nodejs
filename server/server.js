@@ -188,6 +188,24 @@ app.post('/postjobs', (req, res) => {
     })
     
 });
+//methid for fetching job details
+app.post('/jobdetails', (req, res) => {
+    let arr = {};
+    User.find({}).then((doc) => {
+        doc.forEach(element => {
+            element.jobs.forEach(element1 => {
+                if(element1._id == req.body.jobID){
+                    res.send(element1);
+                }
+                    
+                
+            });
+
+        });
+    }, (err) => {
+        res.status(400).send(err);
+    })
+});
 
 
 

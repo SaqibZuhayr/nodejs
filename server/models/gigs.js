@@ -3,6 +3,7 @@ mongoose.connect('mongodb://localhost:27017/aAndf');
 var Schema = mongoose.Schema;
 
 var Gigs = new Schema({
+    userid : String,
     title : String,
     description : String,
     photos : [{
