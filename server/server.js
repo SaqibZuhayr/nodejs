@@ -96,13 +96,17 @@ app.post('/user/auth', (req, res) => {
 //method for fetching questions
 app.post('/questions', (req, res) => {
 
-    console.log('asdasd')
+    // console.log('asdasd')
     let arr = [];
-    Question.find({}).then((doc) => {
-
+    let tag = {};
+    if(req.body.tag){
+        tag["category"]= req.body.tag
+    }
+    //console.log(tag)
+    Question.find(tag).then((doc) => {
         doc.forEach(element => {
-            console.log(element);
-            User.findOne({_id: element.user_id }).then((user) => {
+            // console.log(element);
+            User.findOne({_id: element.user_id}).then((user) => {
                 arr.push({ question: element, user: { 'username': user.username } });
                 if (doc.length == arr.length) {
                     res.send(arr);
