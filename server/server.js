@@ -5,6 +5,7 @@ const multer = require("multer");
 var { mongoose } = require('./db/mongoose');
 var { User } = require('./models/user');
 var { Question } = require('./models/question');
+let { Gigs } = require('./models/gigs')
 
 const upload = multer({dest: "images/"});
 
@@ -301,11 +302,40 @@ app.post('/fetchusers',(req, res) => {
 
 //method for adding gigs
 app.post('/addgig', upload.single('image'), (req, res) => {
-    console.log(req.body.image);
+     //console.log(req.body);
+    var gigs = new Gigs({
+        userid : req.body.userid,
+        title : req.body.gig.gig_title,
+        description : req.body.gig.gig_description,
+        photo : req.body.image,
+        rate : req.body.gig.gig_rate,
+        reviews : [{
+            order_id : null,
+            user_id : null,
+            client_id : null,
+            reviews_rating : null,
+            comment : null
+        }]
+        })
+    gigs.save().then((doc)=>{
+        res.send(doc)
+    },()=>{
+        res.send("error");
+    })
+
    
  });
 
-
+//method for fetching gigs
+ app.post('/fetchgigs',(req, res) => {
+    //  console.log(req.body.id)
+    Gigs.find({}).then((doc) => {
+        res.send(doc);
+    }, (err) => {
+        res.status(400).send(err);
+    })
+    
+ });
 
 //method for updating object
 // app.post('/update',(req,res)=>{

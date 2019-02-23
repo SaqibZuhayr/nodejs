@@ -2,7 +2,7 @@ var mongoose = require('mongoose');
 mongoose.connect('mongodb://localhost:27017/aAndf');
 var Schema = mongoose.Schema;
 
-var Gigs = new Schema({
+var gigs = new Schema({
     userid : String,
     title : String,
     description : String,
@@ -17,3 +17,7 @@ var Gigs = new Schema({
     }]
 
 })
+
+let Gigs = mongoose.model('Gigs',gigs);
+
+module.exports={Gigs};
