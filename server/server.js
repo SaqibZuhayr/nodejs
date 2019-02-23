@@ -301,22 +301,8 @@ app.post('/fetchusers',(req, res) => {
 
 //method for adding gigs
 app.post('/addgig', upload.single('image'), (req, res) => {
-    console.log(req.file);
-     //console.log('asdasd')
-     //console.log(req.body.questionID);
-    //  var question = new Question({
-    //      question: req.body.question,
-    //      user_id: req.body.userid,
-    //      category: req.body.category
- 
-    //  });
-    //  //saving contact to db
-    //  question.save().then((doc) => {
-    //      //returning new object to user
-    //      res.status(200).send(doc);
-    //  }, (err) => {
-    //      res.status(400).send(err);
-    //  })
+    console.log(req.body.image);
+   
  });
 
 
