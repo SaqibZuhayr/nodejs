@@ -5,10 +5,12 @@ var Schema = mongoose.Schema;
 var question = new Schema({
     question : String,
     user_id : String,
+    askedBy : String,
     category : String,
     answer : [{
         answer : String,
         user_id : String,
+        answeredBy: String,
         rating : {
             approved : Boolean,
             score : String

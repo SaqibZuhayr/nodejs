@@ -99,6 +99,11 @@ app.post('/questions', (req, res) => {
     // console.log('asdasd')
     let arr = [];
     let tag = {};
+    if(req.body.search){
+        searchQuestions(req,res);
+        return;
+        
+    }
     if(req.body.tag){
         tag["category"]= req.body.tag
     }
@@ -144,6 +149,7 @@ app.post('/postquestion', (req, res) => {
     var question = new Question({
         question: req.body.question,
         user_id: req.body.userid,
+        askedBy : req.body.askedBy,
         category: req.body.category
 
     });
@@ -165,6 +171,7 @@ app.post('/postanswer', (req, res) => {
     const answer = {
         answer : req.body.answer,
         user_id : req.body.userid, 
+        answeredBy: req.body.answeredBy
     }
     Question.findOne(
         {_id: req.body.questionID }
@@ -335,8 +342,12 @@ app.post('/addgig', upload.single('image'), (req, res) => {
 
 //method for fetching gigs
  app.post('/fetchgigs',(req, res) => {
+     let user = {}
+    if(req.body.userid){
+        user["userid"]= req.body.userid
+    }
     //  console.log(req.body.id)
-    Gigs.find({}).then((doc) => {
+    Gigs.find(user).then((doc) => {
         res.send(doc);
     }, (err) => {
         res.status(400).send(err);
@@ -366,6 +377,49 @@ app.post('/addgig', upload.single('image'), (req, res) => {
     })
     
  });
+
+ //method for searching questions
+ function searchQuestions(req,res){
+    let arr = []
+    Question.find({'category': {'$regex': ".*" + req.body.search + ".*"}}).then((doc) => {
+        doc.forEach(element => {
+            // console.log(element);
+            User.findOne({_id: element.user_id}).then((user) => {
+                arr.push({ question: element, user: { 'username': user.username } });
+                if (doc.length == arr.length) {
+                    res.send(arr);
+                }
+            }), (err) => {
+                res.status(400).send(err);
+            }
+        })
+
+    }, (err) => {
+        res.status(400).send(err);
+    })
+ }
+//method for user answers
+app.post('/useranswers',(req, res) => {
+    //console.log(req.body.userid)
+    let arr=[]
+    Question.find({}).then((doc) => {
+        doc.forEach(element => {
+            element.answer.forEach(answer => {
+                if(answer.user_id === req.body.userid){
+                    arr.push({'questionObj':{'question':element.question, 'askedBy':element.askedBy,'category':element.category},
+                    'answerObj':answer});
+                }
+            });
+        });
+        res.send(arr);
+        console.log(arr);
+        //res.send(doc);
+    }, (err) => {
+        res.status(400).send(err);
+    })
+    
+ });
+
 
 
 //method for updating object
