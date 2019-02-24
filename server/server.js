@@ -102,6 +102,9 @@ app.post('/questions', (req, res) => {
     if(req.body.tag){
         tag["category"]= req.body.tag
     }
+    if(req.body.id){
+        tag["user_id"]= req.body.id
+    }
     //console.log(tag)
     Question.find(tag).then((doc) => {
         doc.forEach(element => {
@@ -340,6 +343,30 @@ app.post('/addgig', upload.single('image'), (req, res) => {
     })
     
  });
+
+// method for gig detail
+ app.post('/gigdetail',(req, res) => {
+    //  console.log(req.body.id)
+    Gigs.findOne({'_id':req.body.gigid}).then((doc) => {
+        res.send(doc);
+    }, (err) => {
+        res.status(400).send(err);
+    })
+    
+ });
+
+ //method for fetching question tags
+ app.get('/getquestiontags',(req, res) => {
+    //  console.log(req.body.id)
+    Question.distinct('category').then((doc) => {
+        console.log("categories",doc)
+        res.send(doc);
+    }, (err) => {
+        res.status(400).send(err);
+    })
+    
+ });
+
 
 //method for updating object
 // app.post('/update',(req,res)=>{
