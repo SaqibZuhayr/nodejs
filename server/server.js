@@ -378,6 +378,43 @@ app.post('/addgig', upload.single('image'), (req, res) => {
     
  });
 
+ //method for fetching freelance tags
+ app.get('/getfreelancetags',(req, res) => {
+    //  console.log(req.body.id)
+    Gigs.distinct('title').then((doc) => {
+        console.log("title",doc)
+        res.send(doc);
+    }, (err) => {
+        res.status(400).send(err);
+    })
+    
+ });
+
+ //method for fetching job tags
+ app.get('/getjobtags',(req, res) => {
+    //  console.log(req.body.id)
+    User.distinct('jobs.category').then((doc) => {
+        console.log("jobs.category",doc)
+        res.send(doc);
+    }, (err) => {
+        res.status(400).send(err);
+    })
+    
+ });
+
+
+ //method for fetching job tags
+//  app.get('/gettrendingjobs',(req, res) => {
+//     //  console.log(req.body.id)
+//     User.find('jobs.category').sort({lastDate : -1}).then((doc) => {
+//         console.log("jobs.category",doc)
+//         res.send(doc);
+//     }, (err) => {
+//         res.status(400).send(err);
+//     })
+    
+//  });
+
  //method for searching questions
  function searchQuestions(req,res){
     let arr = []
