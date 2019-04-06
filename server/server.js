@@ -457,6 +457,34 @@ app.post('/useranswers',(req, res) => {
     
  });
 
+ // method for rating answers
+ app.post('/rateanswer',(req, res) => {
+    //  console.log(req.body.id)
+    console.log(req.body.answerId);
+    Question.find({'_id':req.body.qId}).then((doc) => {
+        doc.forEach(element => {
+            element.answer.forEach(answer => {
+                if(answer._id == req.body.answerId){
+                    if(req.body.rate === "add"){
+                        answer.rating.score += 1;
+                    }
+                    else{
+                        answer.rating.score -= 1;
+                    }
+                    answer.save();
+                } 
+            });
+            element.save();
+        }
+    );
+       // console.log("add q",doc)
+        res.send(doc);
+        doc.save();
+    }, (err) => {
+        res.status(400).send(err);
+    })
+    
+ });
 
 
 //method for updating object
