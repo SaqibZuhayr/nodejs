@@ -4,6 +4,7 @@ var Schema = mongoose.Schema;
 
 var gigs = new Schema({
     userid : String,
+    username : String,
     title : String,
     description : String,
     photo : String,
