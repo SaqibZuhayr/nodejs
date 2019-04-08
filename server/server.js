@@ -8,7 +8,7 @@ var { Question } = require('./models/question');
 let { Gigs } = require('./models/gigs')
 const stripe = require('stripe')('sk_test_tD7ONVYIktON3WD37yTJQTGi');
 const upload = multer({ dest: "images/" });
-var { Message } = require('./models/message');
+var { Message } = require('./models/messageModels');
 var { Conversation } = require('./models/conversation');
 
 
@@ -173,12 +173,12 @@ app.post('/postanswer', (req, res) => {
     //saving answer to db
     const answer = {
 
-        answer : req.body.answer,
-        user_id : req.body.userid, 
+        answer: req.body.answer,
+        user_id: req.body.userid,
         answeredBy: req.body.answeredBy,
         rating: {
-            approved : false,
-            score : 0
+            approved: false,
+            score: 0
         }
 
     }
@@ -328,7 +328,7 @@ app.post('/addgig', upload.single('image'), (req, res) => {
     //console.log(req.body);
     var gigs = new Gigs({
         userid: req.body.userid,
-        username : req.body.username,
+        username: req.body.username,
         title: req.body.gig.gig_title,
         description: req.body.gig.gig_description,
         photo: req.body.image,
@@ -412,7 +412,7 @@ app.get('/getjobtags', (req, res) => {
 
 });
 
-app.post('/payment', async(req, res) => {
+app.post('/payment', async (req, res) => {
     //  console.log(req.body.id)
     console.log(req.body.id)
 
@@ -420,12 +420,12 @@ app.post('/payment', async(req, res) => {
         const { status } = await stripe.charges.create({
             amount: 2000,
             currency: 'usd',
-            description:'asddff',
-            source : req.body.id
+            description: 'asddff',
+            source: req.body.id
         })
 
-        if(status){
-            res.json({status})
+        if (status) {
+            res.json({ status })
         }
     } catch (e) {
         res.status(500).end();
@@ -491,36 +491,75 @@ app.post('/useranswers', (req, res) => {
 
 app.post('/chat', (req, res) => {
     console.log(req.body)
-    
+    const { senderId, receiverId } = req.body;
+
+    Conversation.find({
+        $or: [
+            {
+                participants: {
+                    $elemMatch: {
+                        senderId: senderId, receiverId: receiverId
+                    }
+                }
+            },
+            {
+                participants: {
+                    $elemMatch: {
+                        senderId: receiverId, receiverId: senderId
+                    }
+                }
+            }
+        ]
+    },
+    async (err, result) => {
+        if (result.length > 0){
+
+        }else{
+            const newConversation = new Conversation();
+            newConversation.participants.push({
+                senderId : req.body.senderId,
+                receiverId : req.body.receiverId
+
+            });
+            const saveConversation = await newConversation.save();
+            const newMessage = new Message();
+            newMessage.conversationId = saveConversation._id;
+            newMessage.sender = req.body.senderName;
+            newMessage.receiver = req.body.receiverName;
+            newMessage.push({})
+        }
+    }
+    );
+
 });
- // method for rating answers
- app.post('/rateanswer',(req, res) => {
+// method for rating answers
+app.post('/rateanswer', (req, res) => {
     //  console.log(req.body.id)
     console.log(req.body.answerId);
-    Question.find({'_id':req.body.qId}).then((doc) => {
+    Question.find({ '_id': req.body.qId }).then((doc) => {
         doc.forEach(element => {
             element.answer.forEach(answer => {
-                if(answer._id == req.body.answerId){
-                    if(req.body.rate === "add"){
+                if (answer._id == req.body.answerId) {
+                    if (req.body.rate === "add") {
                         answer.rating.score += 1;
                     }
-                    else{
+                    else {
                         answer.rating.score -= 1;
                     }
                     answer.save();
-                } 
+                }
             });
             element.save();
         }
-    );
-       // console.log("add q",doc)
+        );
+        // console.log("add q",doc)
         res.send(doc);
         doc.save();
     }, (err) => {
         res.status(400).send(err);
     })
-    
- });
+
+});
 
 
 //method for updating object
