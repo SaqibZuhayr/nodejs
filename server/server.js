@@ -172,9 +172,15 @@ app.post('/postanswer', (req, res) => {
     //console.log(req.body.questionID);
     //saving answer to db
     const answer = {
-        answer: req.body.answer,
-        user_id: req.body.userid,
-        answeredBy: req.body.answeredBy
+
+        answer : req.body.answer,
+        user_id : req.body.userid, 
+        answeredBy: req.body.answeredBy,
+        rating: {
+            approved : false,
+            score : 0
+        }
+
     }
     Question.findOne(
         { _id: req.body.questionID }
@@ -487,6 +493,34 @@ app.post('/chat', (req, res) => {
     console.log(req.body)
     
 });
+ // method for rating answers
+ app.post('/rateanswer',(req, res) => {
+    //  console.log(req.body.id)
+    console.log(req.body.answerId);
+    Question.find({'_id':req.body.qId}).then((doc) => {
+        doc.forEach(element => {
+            element.answer.forEach(answer => {
+                if(answer._id == req.body.answerId){
+                    if(req.body.rate === "add"){
+                        answer.rating.score += 1;
+                    }
+                    else{
+                        answer.rating.score -= 1;
+                    }
+                    answer.save();
+                } 
+            });
+            element.save();
+        }
+    );
+       // console.log("add q",doc)
+        res.send(doc);
+        doc.save();
+    }, (err) => {
+        res.status(400).send(err);
+    })
+    
+ });
 
 
 //method for updating object

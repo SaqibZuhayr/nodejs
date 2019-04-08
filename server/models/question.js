@@ -13,7 +13,7 @@ var question = new Schema({
         answeredBy: String,
         rating : {
             approved : Boolean,
-            score : String
+            score : Number
         }
     }]
 })
