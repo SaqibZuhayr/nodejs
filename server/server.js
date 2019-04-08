@@ -171,7 +171,11 @@ app.post('/postanswer', (req, res) => {
     const answer = {
         answer : req.body.answer,
         user_id : req.body.userid, 
-        answeredBy: req.body.answeredBy
+        answeredBy: req.body.answeredBy,
+        rating: {
+            approved : false,
+            score : 0
+        }
     }
     Question.findOne(
         {_id: req.body.questionID }

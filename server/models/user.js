@@ -8,9 +8,10 @@ var User = new Schema({
   contact : String,
   username : String,
   password : String,
-  chats :
+  chatList :
   [{
-        id : String
+        userId : {type : mongoose.Schema.Types.ObjectId, ref : 'Users'},
+        msgId : {type : mongoose.Schema.Types.ObjectId, ref : 'Message'}
   }],
   account :{
       currentAmount : String,
