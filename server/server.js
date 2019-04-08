@@ -6,34 +6,37 @@ var { mongoose } = require('./db/mongoose');
 var { User } = require('./models/user');
 var { Question } = require('./models/question');
 let { Gigs } = require('./models/gigs')
+const stripe = require('stripe')('sk_test_tD7ONVYIktON3WD37yTJQTGi');
+const upload = multer({ dest: "images/" });
+var { Message } = require('./models/message');
+var { Conversation } = require('./models/conversation');
 
-const upload = multer({dest: "images/"});
 
 const MIME_TYPE_MAP = {
     "image/png": "png",
     "image/jpeg": "jpg",
     "image/jpg": "jpg"
-  };
-  
-  
-  const storage = multer.diskStorage({
+};
+
+
+const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-      const isValid = MIME_TYPE_MAP[file.mimetype];
-      let error = new Error("Invalid mime type");
-      if (isValid) {
-        error = null;
-      }
-      cb(error, "images");
+        const isValid = MIME_TYPE_MAP[file.mimetype];
+        let error = new Error("Invalid mime type");
+        if (isValid) {
+            error = null;
+        }
+        cb(error, "images");
     },
     filename: (req, file, cb) => {
-      const name = file.originalname
-        .toLowerCase()
-        .split(" ")
-        .join("-");
-      const ext = MIME_TYPE_MAP[file.mimetype];
-      cb(null, name + "-" + Date.now() + "." + ext);
+        const name = file.originalname
+            .toLowerCase()
+            .split(" ")
+            .join("-");
+        const ext = MIME_TYPE_MAP[file.mimetype];
+        cb(null, name + "-" + Date.now() + "." + ext);
     }
-  });
+});
 
 var app = express();
 
@@ -99,22 +102,22 @@ app.post('/questions', (req, res) => {
     // console.log('asdasd')
     let arr = [];
     let tag = {};
-    if(req.body.search){
-        searchQuestions(req,res);
+    if (req.body.search) {
+        searchQuestions(req, res);
         return;
-        
+
     }
-    if(req.body.tag){
-        tag["category"]= req.body.tag
+    if (req.body.tag) {
+        tag["category"] = req.body.tag
     }
-    if(req.body.id){
-        tag["user_id"]= req.body.id
+    if (req.body.id) {
+        tag["user_id"] = req.body.id
     }
     //console.log(tag)
     Question.find(tag).then((doc) => {
         doc.forEach(element => {
             // console.log(element);
-            User.findOne({_id: element.user_id}).then((user) => {
+            User.findOne({ _id: element.user_id }).then((user) => {
                 arr.push({ question: element, user: { 'username': user.username } });
                 if (doc.length == arr.length) {
                     res.send(arr);
@@ -143,13 +146,13 @@ app.post('/answers', (req, res) => {
 
 //method for posting question
 app.post('/postquestion', (req, res) => {
-   console.log(req.body.userid);
+    console.log(req.body.userid);
     //console.log('asdasd')
     //console.log(req.body.questionID);
     var question = new Question({
         question: req.body.question,
         user_id: req.body.userid,
-        askedBy : req.body.askedBy,
+        askedBy: req.body.askedBy,
         category: req.body.category
 
     });
@@ -169,20 +172,20 @@ app.post('/postanswer', (req, res) => {
     //console.log(req.body.questionID);
     //saving answer to db
     const answer = {
-        answer : req.body.answer,
-        user_id : req.body.userid, 
+        answer: req.body.answer,
+        user_id: req.body.userid,
         answeredBy: req.body.answeredBy
     }
     Question.findOne(
-        {_id: req.body.questionID }
+        { _id: req.body.questionID }
     ).then((doc) => {
         console.log(doc);
         doc.answer.push(answer);
         doc.save((err) => {
-            if(err){
+            if (err) {
                 res.status(400).send(err);
             }
-            else{
+            else {
                 console.log("saved");
             }
 
@@ -195,7 +198,7 @@ app.post('/postanswer', (req, res) => {
 
 //method for fetching Jobs
 app.post('/viewjobs', (req, res) => {
-    let arr=[];
+    let arr = [];
     User.find({}).then((doc) => {
         doc.forEach(element => {
             element.jobs.forEach(element1 => {
@@ -213,15 +216,15 @@ app.post('/viewjobs', (req, res) => {
 app.post('/postjobs', (req, res) => {
     console.log(req.body.userid);
     User.findOne(
-        {_id: req.body.userid }
+        { _id: req.body.userid }
     ).then((doc) => {
         console.log(doc);
         doc.jobs.push(req.body.job);
         doc.save((err) => {
-            if(err){
+            if (err) {
                 res.status(400).send(err);
             }
-            else{
+            else {
                 console.log("saved");
             }
 
@@ -230,7 +233,7 @@ app.post('/postjobs', (req, res) => {
     }, (err) => {
         res.status(400).send(err);
     })
-    
+
 });
 //methid for fetching job details
 app.post('/jobdetails', (req, res) => {
@@ -238,11 +241,11 @@ app.post('/jobdetails', (req, res) => {
     User.find({}).then((doc) => {
         doc.forEach(element => {
             element.jobs.forEach(element1 => {
-                if(element1._id == req.body.jobID){
+                if (element1._id == req.body.jobID) {
                     res.send(element1);
                 }
-                    
-                
+
+
             });
 
         });
@@ -251,51 +254,51 @@ app.post('/jobdetails', (req, res) => {
     })
 });
 //method for fetching users
-app.post('/fetchusers',(req, res) => {
+app.post('/fetchusers', (req, res) => {
     User.find({}).then((doc) => {
         res.send(doc);
     }, (err) => {
         res.status(400).send(err);
     })
-    
- });
- //method for deleting user
- app.post('/deleteuser',(req, res) => {
+
+});
+//method for deleting user
+app.post('/deleteuser', (req, res) => {
     //  console.log(req.body.id)
-    User.find({'_id':req.body.id}).remove().then((doc) => {
-        Question.find({'user_id':req.body.id}).remove().then((doc1)=>{
-            
+    User.find({ '_id': req.body.id }).remove().then((doc) => {
+        Question.find({ 'user_id': req.body.id }).remove().then((doc1) => {
+
         })
         res.send(doc);
     }, (err) => {
         res.status(400).send(err);
     })
-    
- });
- //method for deleting question
- app.post('/deletequestion',(req, res) => {
+
+});
+//method for deleting question
+app.post('/deletequestion', (req, res) => {
     //  console.log(req.body.id)
-    Question.find({'_id':req.body.id}).remove().then((doc) => {
+    Question.find({ '_id': req.body.id }).remove().then((doc) => {
         res.send(doc);
     }, (err) => {
         res.status(400).send(err);
     })
-    
- });
- //method for admin dashboard
- app.post('/adminDashboard',(req, res) => {
+
+});
+//method for admin dashboard
+app.post('/adminDashboard', (req, res) => {
     //  console.log(req.body.id)
     countanswer = 0;
     countquestion = 0;
-    countuser =0;
+    countuser = 0;
     User.countDocuments({}).then((doc) => {
         countuser = doc;
-        Question.find({}).then((doc1)=>{
-            countquestion=doc1.length;
-            doc1.forEach((element ,index)=> {
+        Question.find({}).then((doc1) => {
+            countquestion = doc1.length;
+            doc1.forEach((element, index) => {
                 console.log(' ================ ', element.answer.length);
-                countanswer+=Number(element.answer.length);
-                if(doc1.length==index+1){
+                countanswer += Number(element.answer.length);
+                if (doc1.length == index + 1) {
                     res.send({
                         countanswer,
                         countquestion,
@@ -305,46 +308,47 @@ app.post('/fetchusers',(req, res) => {
 
             });
         })
-       // console.log(countuser);
-       // res.send(doc);
+        // console.log(countuser);
+        // res.send(doc);
     }, (err) => {
         res.status(400).send(err);
     })
-    
- }); 
+
+});
 
 
 //method for adding gigs
 app.post('/addgig', upload.single('image'), (req, res) => {
-     //console.log(req.body);
+    //console.log(req.body);
     var gigs = new Gigs({
-        userid : req.body.userid,
-        title : req.body.gig.gig_title,
-        description : req.body.gig.gig_description,
-        photo : req.body.image,
-        rate : req.body.gig.gig_rate,
-        reviews : [{
-            order_id : null,
-            user_id : null,
-            client_id : null,
-            reviews_rating : null,
-            comment : null
+        userid: req.body.userid,
+        username : req.body.username,
+        title: req.body.gig.gig_title,
+        description: req.body.gig.gig_description,
+        photo: req.body.image,
+        rate: req.body.gig.gig_rate,
+        reviews: [{
+            order_id: null,
+            user_id: null,
+            client_id: null,
+            reviews_rating: null,
+            comment: null
         }]
-        })
-    gigs.save().then((doc)=>{
+    })
+    gigs.save().then((doc) => {
         res.send(doc)
-    },()=>{
+    }, () => {
         res.send("error");
     })
 
-   
- });
+
+});
 
 //method for fetching gigs
- app.post('/fetchgigs',(req, res) => {
-     let user = {}
-    if(req.body.userid){
-        user["userid"]= req.body.userid
+app.post('/fetchgigs', (req, res) => {
+    let user = {}
+    if (req.body.userid) {
+        user["userid"] = req.body.userid
     }
     //  console.log(req.body.id)
     Gigs.find(user).then((doc) => {
@@ -352,58 +356,78 @@ app.post('/addgig', upload.single('image'), (req, res) => {
     }, (err) => {
         res.status(400).send(err);
     })
-    
- });
+
+});
 
 // method for gig detail
- app.post('/gigdetail',(req, res) => {
+app.post('/gigdetail', (req, res) => {
     //  console.log(req.body.id)
-    Gigs.findOne({'_id':req.body.gigid}).then((doc) => {
+    Gigs.findOne({ '_id': req.body.gigid }).then((doc) => {
         res.send(doc);
     }, (err) => {
         res.status(400).send(err);
     })
-    
- });
 
- //method for fetching question tags
- app.get('/getquestiontags',(req, res) => {
+});
+
+//method for fetching question tags
+app.get('/getquestiontags', (req, res) => {
     //  console.log(req.body.id)
     Question.distinct('category').then((doc) => {
-        console.log("categories",doc)
+        console.log("categories", doc)
         res.send(doc);
     }, (err) => {
         res.status(400).send(err);
     })
-    
- });
 
- //method for fetching freelance tags
- app.get('/getfreelancetags',(req, res) => {
+});
+
+//method for fetching freelance tags
+app.get('/getfreelancetags', (req, res) => {
     //  console.log(req.body.id)
     Gigs.distinct('title').then((doc) => {
-        console.log("title",doc)
+        console.log("title", doc)
         res.send(doc);
     }, (err) => {
         res.status(400).send(err);
     })
-    
- });
 
- //method for fetching job tags
- app.get('/getjobtags',(req, res) => {
+});
+
+//method for fetching job tags
+app.get('/getjobtags', (req, res) => {
     //  console.log(req.body.id)
     User.distinct('jobs.category').then((doc) => {
-        console.log("jobs.category",doc)
+        console.log("jobs.category", doc)
         res.send(doc);
     }, (err) => {
         res.status(400).send(err);
     })
-    
- });
 
+});
 
- //method for fetching job tags
+app.post('/payment', async(req, res) => {
+    //  console.log(req.body.id)
+    console.log(req.body.id)
+
+    try {
+        const { status } = await stripe.charges.create({
+            amount: 2000,
+            currency: 'usd',
+            description:'asddff',
+            source : req.body.id
+        })
+
+        if(status){
+            res.json({status})
+        }
+    } catch (e) {
+        res.status(500).end();
+    }
+
+});
+
+//method for fetching job tags
 //  app.get('/gettrendingjobs',(req, res) => {
 //     //  console.log(req.body.id)
 //     User.find('jobs.category').sort({lastDate : -1}).then((doc) => {
@@ -412,16 +436,16 @@ app.post('/addgig', upload.single('image'), (req, res) => {
 //     }, (err) => {
 //         res.status(400).send(err);
 //     })
-    
+
 //  });
 
- //method for searching questions
- function searchQuestions(req,res){
+//method for searching questions
+function searchQuestions(req, res) {
     let arr = []
-    Question.find({'category': {'$regex': ".*" + req.body.search + ".*"}}).then((doc) => {
+    Question.find({ 'category': { '$regex': ".*" + req.body.search + ".*" } }).then((doc) => {
         doc.forEach(element => {
             // console.log(element);
-            User.findOne({_id: element.user_id}).then((user) => {
+            User.findOne({ _id: element.user_id }).then((user) => {
                 arr.push({ question: element, user: { 'username': user.username } });
                 if (doc.length == arr.length) {
                     res.send(arr);
@@ -434,17 +458,19 @@ app.post('/addgig', upload.single('image'), (req, res) => {
     }, (err) => {
         res.status(400).send(err);
     })
- }
+}
 //method for user answers
-app.post('/useranswers',(req, res) => {
+app.post('/useranswers', (req, res) => {
     //console.log(req.body.userid)
-    let arr=[]
+    let arr = []
     Question.find({}).then((doc) => {
         doc.forEach(element => {
             element.answer.forEach(answer => {
-                if(answer.user_id === req.body.userid){
-                    arr.push({'questionObj':{'question':element.question, 'askedBy':element.askedBy,'category':element.category},
-                    'answerObj':answer});
+                if (answer.user_id === req.body.userid) {
+                    arr.push({
+                        'questionObj': { 'question': element.question, 'askedBy': element.askedBy, 'category': element.category },
+                        'answerObj': answer
+                    });
                 }
             });
         });
@@ -454,9 +480,13 @@ app.post('/useranswers',(req, res) => {
     }, (err) => {
         res.status(400).send(err);
     })
-    
- });
 
+});
+
+app.post('/chat', (req, res) => {
+    console.log(req.body)
+    
+});
 
 
 //method for updating object
