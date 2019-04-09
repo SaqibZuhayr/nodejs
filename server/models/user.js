@@ -10,7 +10,7 @@ var User = new Schema({
   password : String,
   chatList :
   [{
-        userId : {type : mongoose.Schema.Types.ObjectId, ref : 'Users'},
+        receiverId : {type : mongoose.Schema.Types.ObjectId, ref : 'Users'},
         msgId : {type : mongoose.Schema.Types.ObjectId, ref : 'Message'}
   }],
   account :{

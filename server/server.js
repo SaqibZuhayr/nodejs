@@ -491,7 +491,6 @@ app.post('/useranswers', (req, res) => {
 });
 
 app.post('/chat', (req, res) => {
-    console.log(req.body)
     const { senderId, receiverId } = req.body;
 
     Conversation.find({
@@ -514,7 +513,25 @@ app.post('/chat', (req, res) => {
     },
         async (err, result) => {
             if (result.length > 0) {
+                await Message.updateOne({
+                    conversationId: result[0]._id
 
+                },
+                    {
+                        $push: {
+                            message: {
+                                senderId: req.body.senderId,
+                                receiverId: req.body.receiverId,
+                                sendername: req.body.senderName,
+                                receivername: req.body.receiverName,
+                                body: req.body.message
+                            }
+                        }
+                    }).then((doc) =>{
+                        console.log(doc)
+                        res.status(HttpStatus.OK).json({ message: 'Message sent asd' })
+                    })
+                    .catch(err => res.status(HttpStatus.INTERNAL_SERVER_ERROR));
             } else {
                 const newConversation = new Conversation();
                 newConversation.participants.push({
@@ -524,56 +541,59 @@ app.post('/chat', (req, res) => {
                 });
                 const saveConversation = await newConversation.save();
                 const newMessage = new Message();
+                console.log(saveConversation._id)
                 newMessage.conversationId = saveConversation._id;
                 newMessage.sender = req.body.senderName;
                 newMessage.receiver = req.body.receiverName;
-                newMessage.push({
+                newMessage.message.push({
+
                     senderId: req.body.senderId,
                     receiverId: req.body.receiverId,
                     sendername: req.body.senderName,
                     receivername: req.body.receiverName,
                     body: req.body.message
+
                 });
 
                 await newMessage
                     .save().then(() => res.status(HttpStatus.OK).json({ message: 'Message sent' }))
-                    .catch(err => res.status(HttpStatus.INTERNAL_SERVER_ERROR)).json({ message: 'Error Occured' });
+                    .catch(err => res.status(HttpStatus.INTERNAL_SERVER_ERROR));
 
                 await User.update({
                     _id: req.body.senderId
+
                 },
-                {
-                    $push: {
-                        chatList: {
-                            $each: [
-                                {
-                                    receiverId: req.body.receiverId,
-                                    msgId: newMessage._id
-                                }
-                            ]
-                            ,
-                            $position: 0
+                    {
+                        $push: {
+                            chatList: {
+                                $each: [
+                                    {
+                                        receiverId: req.body.receiverId,
+                                        msgId: newMessage._id
+                                    }
+                                ],
+                                $position: 0
+                            }
                         }
                     }
-                }
                 );
                 await User.update({
                     _id: req.body.receiverId
                 },
-                {
-                    $push: {
-                        chatList: {
-                            $each: [
-                                {
-                                    receiverId: req.body.senderId,
-                                    msgId: newMessage._id
-                                }
-                            ]
-                            ,
-                            $position: 0
+                    {
+                        $push: {
+                            chatList: {
+                                $each: [
+                                    {
+                                        receiverId: req.body.senderId,
+                                        msgId: newMessage._id
+                                    }
+                                ]
+                                ,
+                                $position: 0
+                            }
                         }
                     }
-                }
                 );
 
             }
@@ -581,6 +601,37 @@ app.post('/chat', (req, res) => {
     );
 
 });
+
+ app.post('/getchat', async (req,res) => {
+     console.log('getchat');
+    const { senderId, receiverId } = req.body;
+
+    const conversation = await Conversation.findOne({
+        $or: [
+            {
+                participants: {
+                    $elemMatch: {
+                        senderId: req.body.senderId, receiverId: req.body.receiverId
+                    }
+                }
+            },
+            {
+                participants: {
+                    $elemMatch: {
+                        senderId: req.body.receiverId, receiverId: req.body.senderId
+                    }
+                }
+            }
+        ]
+    }).select('_id');
+    if(conversation) {
+        const messages = await Message.findOne({
+           conversationId: conversation._id 
+        });
+        res.status(HttpStatus.OK).json({message: 'Messages returned' , messages});
+    }
+ });
+
 // method for rating answers
 app.post('/rateanswer', (req, res) => {
     //  console.log(req.body.id)
