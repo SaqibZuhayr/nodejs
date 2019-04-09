@@ -1,6 +1,7 @@
 var express = require('Express');
 var bodyParser = require('body-parser');
 const multer = require("multer");
+const HttpStatus = require('http-status-codeS');
 
 var { mongoose } = require('./db/mongoose');
 var { User } = require('./models/user');
@@ -498,37 +499,85 @@ app.post('/chat', (req, res) => {
             {
                 participants: {
                     $elemMatch: {
-                        senderId: senderId, receiverId: receiverId
+                        senderId: req.body.senderId, receiverId: req.body.receiverId
                     }
                 }
             },
             {
                 participants: {
                     $elemMatch: {
-                        senderId: receiverId, receiverId: senderId
+                        senderId: req.body.receiverId, receiverId: req.body.senderId
                     }
                 }
             }
         ]
     },
-    async (err, result) => {
-        if (result.length > 0){
+        async (err, result) => {
+            if (result.length > 0) {
 
-        }else{
-            const newConversation = new Conversation();
-            newConversation.participants.push({
-                senderId : req.body.senderId,
-                receiverId : req.body.receiverId
+            } else {
+                const newConversation = new Conversation();
+                newConversation.participants.push({
+                    senderId: req.body.senderId,
+                    receiverId: req.body.receiverId
 
-            });
-            const saveConversation = await newConversation.save();
-            const newMessage = new Message();
-            newMessage.conversationId = saveConversation._id;
-            newMessage.sender = req.body.senderName;
-            newMessage.receiver = req.body.receiverName;
-            newMessage.push({})
+                });
+                const saveConversation = await newConversation.save();
+                const newMessage = new Message();
+                newMessage.conversationId = saveConversation._id;
+                newMessage.sender = req.body.senderName;
+                newMessage.receiver = req.body.receiverName;
+                newMessage.push({
+                    senderId: req.body.senderId,
+                    receiverId: req.body.receiverId,
+                    sendername: req.body.senderName,
+                    receivername: req.body.receiverName,
+                    body: req.body.message
+                });
+
+                await newMessage
+                    .save().then(() => res.status(HttpStatus.OK).json({ message: 'Message sent' }))
+                    .catch(err => res.status(HttpStatus.INTERNAL_SERVER_ERROR)).json({ message: 'Error Occured' });
+
+                await User.update({
+                    _id: req.body.senderId
+                },
+                {
+                    $push: {
+                        chatList: {
+                            $each: [
+                                {
+                                    receiverId: req.body.receiverId,
+                                    msgId: newMessage._id
+                                }
+                            ]
+                            ,
+                            $position: 0
+                        }
+                    }
+                }
+                );
+                await User.update({
+                    _id: req.body.receiverId
+                },
+                {
+                    $push: {
+                        chatList: {
+                            $each: [
+                                {
+                                    receiverId: req.body.senderId,
+                                    msgId: newMessage._id
+                                }
+                            ]
+                            ,
+                            $position: 0
+                        }
+                    }
+                }
+                );
+
+            }
         }
-    }
     );
 
 });
