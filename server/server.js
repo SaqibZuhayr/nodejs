@@ -2,6 +2,10 @@ var express = require('Express');
 var bodyParser = require('body-parser');
 const multer = require("multer");
 const HttpStatus = require('http-status-codeS');
+const server = require('http').createServer(app);
+const io = require('socket.io').listen(server);
+
+
 
 var { mongoose } = require('./db/mongoose');
 var { User } = require('./models/user');
@@ -660,6 +664,7 @@ app.post('/rateanswer', (req, res) => {
     })
 
 });
+require('./socket')(io);
 
 
 //method for updating object
@@ -695,6 +700,6 @@ app.post('/rateanswer', (req, res) => {
 // });
 
 
-app.listen(3000, () => {
+server.listen(3000, () => {
     console.log('Server started on 3000')
 })
