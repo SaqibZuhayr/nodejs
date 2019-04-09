@@ -2,8 +2,7 @@ var express = require('Express');
 var bodyParser = require('body-parser');
 const multer = require("multer");
 const HttpStatus = require('http-status-codeS');
-const server = require('http').createServer(app);
-const io = require('socket.io').listen(server);
+
 
 
 
@@ -54,6 +53,9 @@ app.use(function (req, res, next) {
     res.setHeader('Access-Control-Allow-Credentials', true);
     next();
 });
+
+const server = require('http').createServer(app);
+const io = require('socket.io').listen(server);
 
 //angular (public) files
 //app.use(express.static(__dirname + '/../public')); 
