@@ -668,7 +668,36 @@ app.post('/rateanswer', (req, res) => {
 });
 require('./socket')(io);
 
+app.post('/getConversations',(req,res)=>{
+   //console.log(req.body.userid,)
+   let users = [];
+   let chatlist = [];
+   Conversation.find().
+   then((doc)=>{
+       doc.forEach(element => {
+           element.participants.forEach(element2 => {
+               if(element2.senderId == req.body.userid || element2.receiverId == req.body.userid){
+                   if(element2.senderId != req.body.userid){
+                       users.push({'id':element2.senderId});
 
+                   }
+                   if(element2.receiverId != req.body.userid){
+                    users.push({'id':element2.receiverId});
+                   }
+               }
+           });
+       });
+       users.forEach(element => {
+           User.findOne({'_id':element.id}).then((doc2)=>{
+               chatlist.push(doc2);
+               if(users.length == chatlist.length){
+                   res.send(chatlist);
+               }
+           })
+       });
+   })
+//     
+});
 //method for updating object
 // app.post('/update',(req,res)=>{
 //     //mongoose method for finding object by id and then updating it
