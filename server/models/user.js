@@ -30,8 +30,32 @@ var User = new Schema({
       
       
   },
-  orders : [
+  ordersAccepted : [
     {
+      userid : String,
+      gig_id : String,
+      title : String,
+      description : String,
+      amount : String,
+      time_limit : String,
+      dispute_id : String,
+      completed : Boolean,
+    }
+],
+ordersRequested : [
+    {
+      userid : String,
+      gig_id : String,
+      title : String,
+      description : String,
+      amount : String,
+      time_limit : String,
+      dispute_id : String
+    }
+],
+myOrders : [
+    {
+      userid : String,  
       gig_id : String,
       title : String,
       description : String,

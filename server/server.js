@@ -533,7 +533,7 @@ app.post('/chat', (req, res) => {
                                 body: req.body.message
                             }
                         }
-                    }).then((doc) =>{
+                    }).then((doc) => {
                         console.log(doc)
                         res.status(HttpStatus.OK).json({ message: 'Message sent asd' })
                     })
@@ -608,8 +608,8 @@ app.post('/chat', (req, res) => {
 
 });
 
- app.post('/getchat', async (req,res) => {
-     console.log('getchat');
+app.post('/getchat', async (req, res) => {
+    console.log('getchat');
     const { senderId, receiverId } = req.body;
 
     const conversation = await Conversation.findOne({
@@ -630,13 +630,13 @@ app.post('/chat', (req, res) => {
             }
         ]
     }).select('_id');
-    if(conversation) {
+    if (conversation) {
         const messages = await Message.findOne({
-           conversationId: conversation._id 
+            conversationId: conversation._id
         });
-        res.status(HttpStatus.OK).json({message: 'Messages returned' , messages});
+        res.status(HttpStatus.OK).json({ message: 'Messages returned', messages });
     }
- });
+});
 
 // method for rating answers
 app.post('/rateanswer', (req, res) => {
@@ -668,46 +668,113 @@ app.post('/rateanswer', (req, res) => {
 });
 require('./socket')(io);
 
-app.post('/getConversations',(req,res)=>{
-   //console.log(req.body.userid,)
-   let users = [];
-   let chatlist = [];
-   Conversation.find().
-   then((doc)=>{
-       doc.forEach(element => {
-           element.participants.forEach(element2 => {
-               if(element2.senderId == req.body.userid || element2.receiverId == req.body.userid){
-                   if(element2.senderId != req.body.userid){
-                       users.push({'id':element2.senderId});
+app.post('/getConversations', (req, res) => {
+    //console.log(req.body.userid,)
+    let users = [];
+    let chatlist = [];
+    Conversation.find().
+        then((doc) => {
+            doc.forEach(element => {
+                element.participants.forEach(element2 => {
+                    if (element2.senderId == req.body.userid || element2.receiverId == req.body.userid) {
+                        if (element2.senderId != req.body.userid) {
+                            users.push({ 'id': element2.senderId });
 
-                   }
-                   if(element2.receiverId != req.body.userid){
-                    users.push({'id':element2.receiverId});
-                   }
-               }
-           });
-       });
-       users.forEach(element => {
-           User.findOne({'_id':element.id}).then((doc2)=>{
-               chatlist.push(doc2);
-               if(users.length == chatlist.length){
-                   res.send(chatlist);
-               }
-           })
-       });
-   })
-//     
+                        }
+                        if (element2.receiverId != req.body.userid) {
+                            users.push({ 'id': element2.receiverId });
+                        }
+                    }
+                });
+            });
+            users.forEach(element => {
+                User.findOne({ '_id': element.id }).then((doc2) => {
+                    chatlist.push(doc2);
+                    if (users.length == chatlist.length) {
+                        res.send(chatlist);
+                    }
+                })
+            });
+        })
+    //     
 });
-//method for updating object
-// app.post('/update',(req,res)=>{
-//     //mongoose method for finding object by id and then updating it
-//     Contact.findByIdAndUpdate(req.body.id,{$set : { name : req.body.name,email : req.body.email,phone : req.body.phone}},{new : true}).then((doc)=>{ 
-//         //sending updated object to user
-//         res.send({contact : doc});
-// },(err)=>{
-//     res.status(400).send(err);
-// })
-// });
+
+//method for submitting order
+app.post('/submitOrder', (req, res) => {
+    console.log(req.body);
+    User.update({
+        _id: req.body.receiverid
+    },
+        {
+            $push: {
+                ordersRequested: {
+                    $each: [
+                        {
+                            userid: req.body.userid,
+                            gig_id: req.body.gigid,
+                            title: req.body.order.order_name,
+                            description: req.body.order.order_description,
+                            amount: req.body.order.order_price,
+                            time_limit: req.body.order.order_delivery_time,
+                            dispute_id: null
+                        }
+                    ]
+                    ,
+                    $position: 0
+                }
+            }
+        }
+    ).then((doc)=>{
+        console.log("Done");
+        res.send(doc);
+    });
+
+
+
+});
+
+//method for fetching orders
+app.post('/getOrderRequests',(req,res)=>{
+   // console.log(req.body)
+   User.findOne({'_id':req.body.userid}).then((doc)=>{
+       res.send(doc.ordersRequested);
+   });
+  
+});
+//method for accepting order
+app.post('/acceptOrder',(req,res)=>{
+    // console.log(req.body)
+    // User.findOne({'_id':req.body.userid}).then((doc)=>{
+        
+    // });
+
+    User.findOneAndUpdate(
+        {_id: req.body.userid },
+        { $pull: { ordersRequested: { _id: req.body.orderid } } },
+        {new: false},
+         (err, doc) => {
+            if (err) {
+                console.log("Something wrong when updating data!");
+            }
+            else{
+                console.log("------------------ ",doc,"--------------------");
+                let tem = doc.ordersRequested.filter((val)=>{
+                     // console.log(val._id , req.body.orderid);
+                        if(val._id == req.body.orderid){
+                            console.log(val)
+                            return val;
+                        }
+                        
+                })
+                doc.ordersAccepted.push(tem[0]);
+                doc.save();
+            }
+        
+            
+        }
+      );
+
+});
 
 //method for finding single contact by id
 // app.post('/Singleuser',(req,res)=>{
