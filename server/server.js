@@ -10,7 +10,7 @@ var { mongoose } = require('./db/mongoose');
 var { User } = require('./models/user');
 var { Question } = require('./models/question');
 let { Gigs } = require('./models/gigs')
-const stripe = require('stripe')('sk_test_tD7ONVYIktON3WD37yTJQTGi');
+const stripe = require('stripe')('sk_test_Xglytt8jX4bP2C2zCaTGC2ZE');
 const upload = multer({ dest: "images/" });
 var { Message } = require('./models/messageModels');
 var { Conversation } = require('./models/conversation');
@@ -141,11 +141,36 @@ app.post('/questions', (req, res) => {
 //method for fetching answers
 app.post('/answers', (req, res) => {
     let arr = [];
+    let score = 0;
     //console.log('asdasd')
     //console.log(req.body.questionID);
-    Question.find({ '_id': req.body.questionID }).then((doc) => {
-        console.log(doc);
-        res.send(doc);
+    Question.findOne({ '_id': req.body.questionID }).then((doc) => {
+        answers = [];
+        result = {
+            'askedBy': doc.askedBy,
+            'question': doc.question,
+            'questionid': doc._id,
+            'category': doc.category,
+            answers
+        }
+
+        doc.answer.forEach(element => {
+            score = 0;
+            element.rating.forEach((element2) => {
+                if (element2.ratedAs == "add") {
+                    score++;
+                }
+                else {
+                    score--;
+                }
+            });
+
+            result.answers.push({ answer: element, score })
+            if (result.answers.length == doc.answer.length) {
+                res.send(result);
+            }
+        });
+
     }, (err) => {
         res.status(400).send(err);
     })
@@ -183,10 +208,7 @@ app.post('/postanswer', (req, res) => {
         answer: req.body.answer,
         user_id: req.body.userid,
         answeredBy: req.body.answeredBy,
-        rating: {
-            approved: false,
-            score: 0
-        }
+        approved: false
 
     }
     Question.findOne(
@@ -423,11 +445,21 @@ app.post('/payment', async (req, res) => {
     //  console.log(req.body.id)
     console.log(req.body.id)
 
+    // stripe.transfers.create({
+    //     amount: 400,
+    //     currency: "usd",
+    //     destination: "cus_Et92lXvsTgyj5v",
+    //     transfer_group: "ORDER_95"
+    //   }, function(err, transfer) {
+    //       console.log(transfer);
+    //     // asynchronously called
+    //   });
+
     try {
         const { status } = await stripe.charges.create({
             amount: 2000,
             currency: 'usd',
-            description: 'asddff',
+            description: 'cus_Et92lXvsTgyj5v',
             source: req.body.id
         })
 
@@ -641,31 +673,30 @@ app.post('/getchat', async (req, res) => {
 // method for rating answers
 app.post('/rateanswer', (req, res) => {
     //  console.log(req.body.id)
-    console.log(req.body.answerId);
-    Question.find({ '_id': req.body.qId }).then((doc) => {
-        doc.forEach(element => {
-            element.answer.forEach(answer => {
-                if (answer._id == req.body.answerId) {
-                    if (req.body.rate === "add") {
-                        answer.rating.score += 1;
+    //console.log(req.body);
+    Question.findOne({ 'answer._id': req.body.answerId}).select('answer').then((doc) => {
+        doc.answer.forEach(ANSWER => {
+            if(ANSWER._id == req.body.answerId){
+                ANSWER.rating.forEach(RATING => {
+                    if(RATING.ratedBy == req.body.userid){
+                        res.send({message : 'allready rated'});
+                        return;
                     }
-                    else {
-                        answer.rating.score -= 1;
-                    }
-                    answer.save();
-                }
-            });
-            element.save();
-        }
-        );
-        // console.log("add q",doc)
-        res.send(doc);
-        doc.save();
-    }, (err) => {
-        res.status(400).send(err);
-    })
+                    
+                });
+                ANSWER.rating.push({ratedBy : req.body.userid, ratedAs : req.body.rate});
+                ANSWER.save();
+                res.send(doc);
+                
+            }
+        });
+          doc.save();  
+        });
+    });
 
-});
+
+
+
 require('./socket')(io);
 
 app.post('/getConversations', (req, res) => {
@@ -724,7 +755,7 @@ app.post('/submitOrder', (req, res) => {
                 }
             }
         }
-    ).then((doc)=>{
+    ).then((doc) => {
         console.log("Done");
         res.send(doc);
     });
@@ -734,45 +765,58 @@ app.post('/submitOrder', (req, res) => {
 });
 
 //method for fetching orders
-app.post('/getOrderRequests',(req,res)=>{
-   // console.log(req.body)
-   User.findOne({'_id':req.body.userid}).then((doc)=>{
-       res.send(doc.ordersRequested);
-   });
-  
+app.post('/getOrderRequests', (req, res) => {
+    //console.log(req.body.orderType);
+    User.findOne({ '_id': req.body.userid }).then((doc) => {
+        res.send(doc.ordersRequested);
+    });
+
+});
+
+app.post('/getPendingOrders', (req, res) => {
+    //console.log(req.body.orderType);
+    User.findOne({ '_id': req.body.userid }).then((doc) => {
+        res.send(doc.ordersAccepted);
+    });
+
 });
 //method for accepting order
-app.post('/acceptOrder',(req,res)=>{
+app.post('/acceptOrder', (req, res) => {
     // console.log(req.body)
     // User.findOne({'_id':req.body.userid}).then((doc)=>{
-        
+
     // });
 
     User.findOneAndUpdate(
-        {_id: req.body.userid },
+        { _id: req.body.userid },
         { $pull: { ordersRequested: { _id: req.body.orderid } } },
-        {new: false},
-         (err, doc) => {
+        { new: false },
+        (err, doc) => {
             if (err) {
                 console.log("Something wrong when updating data!");
             }
-            else{
-                console.log("------------------ ",doc,"--------------------");
-                let tem = doc.ordersRequested.filter((val)=>{
-                     // console.log(val._id , req.body.orderid);
-                        if(val._id == req.body.orderid){
-                            console.log(val)
-                            return val;
-                        }
-                        
+            else {
+                // console.log("------------------ ", doc, "--------------------");
+                let tem = doc.ordersRequested.filter((val) => {
+                    // console.log(val._id , req.body.orderid);
+                    if (val._id == req.body.orderid) {
+                        // console.log(val)
+                        return val;
+                    }
+
                 })
-                doc.ordersAccepted.push(tem[0]);
-                doc.save();
+                if (req.body.requestType == "accept") {
+                    doc.ordersAccepted.push(tem[0]);
+                    doc.save();
+                }
+                res.send({ message: "Orders updated" });
+
+
             }
-        
-            
+
+
         }
-      );
+    );
 
 });
 

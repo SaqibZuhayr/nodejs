@@ -11,10 +11,11 @@ var question = new Schema({
         answer : String,
         user_id : String,
         answeredBy: String,
-        rating : {
-            approved : Boolean,
-            score : Number
-        }
+        approved : Boolean,
+        rating :[ {
+            ratedBy : String,
+            ratedAs : String
+        }]
     }]
 })
 var Question = mongoose.model('Questions',question);
