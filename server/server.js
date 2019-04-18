@@ -2,7 +2,7 @@ var express = require('Express');
 var bodyParser = require('body-parser');
 const multer = require("multer");
 const HttpStatus = require('http-status-codeS');
-
+var keyword_extractor = require("keyword-extractor");
 
 
 
@@ -14,7 +14,7 @@ const stripe = require('stripe')('sk_test_Xglytt8jX4bP2C2zCaTGC2ZE');
 const upload = multer({ dest: "images/" });
 var { Message } = require('./models/messageModels');
 var { Conversation } = require('./models/conversation');
-
+var { Keywords } = require('./models/keywords');
 
 const MIME_TYPE_MAP = {
     "image/png": "png",
@@ -153,23 +153,33 @@ app.post('/answers', (req, res) => {
             'category': doc.category,
             answers
         }
-
-        doc.answer.forEach(element => {
-            score = 0;
-            element.rating.forEach((element2) => {
-                if (element2.ratedAs == "add") {
-                    score++;
-                }
-                else {
-                    score--;
+        if(doc.answer.length > 0){
+            doc.answer.forEach(element => {
+                score = 0;
+                element.rating.forEach((element2) => {
+                    if (element2.ratedAs == "add") {
+                        score++;
+                    }
+                    else {
+                        score--;
+                    }
+                });
+    
+                result.answers.push({ answer: element, score })
+                if (result.answers.length == doc.answer.length) {
+                    res.send(result);
                 }
             });
+        }
+        else{
+            res.send(result);
+        }
 
-            result.answers.push({ answer: element, score })
-            if (result.answers.length == doc.answer.length) {
-                res.send(result);
-            }
-        });
+     
+
+
+
+
 
     }, (err) => {
         res.status(400).send(err);
@@ -177,24 +187,40 @@ app.post('/answers', (req, res) => {
 });
 
 //method for posting question
-app.post('/postquestion', (req, res) => {
+app.post('/postquestion', async (req, res) => {
     console.log(req.body.userid);
     //console.log('asdasd')
     //console.log(req.body.questionID);
+
+    var questionKeywords = keywordsSearch(req.body.question);
     var question = new Question({
         question: req.body.question,
         user_id: req.body.userid,
         askedBy: req.body.askedBy,
-        category: req.body.category
+        category: req.body.category,
+        keywords: questionKeywords
 
     });
     //saving contact to db
-    question.save().then((doc) => {
-        //returning new object to user
-        res.status(200).send(doc);
-    }, (err) => {
-        res.status(400).send(err);
-    })
+    const savedQuestion = await question.save();
+    let relatedQs = [];
+    relatedQs.push(savedQuestion._id);
+    questionKeywords.forEach(element => {
+        Keywords.findOne({ keyword: element }).then((kw) => {
+            if (kw) {
+                kw.relatedQuestions.push(savedQuestion._id);
+                kw.save();
+            }
+            else {
+                new Keywords({
+                    keyword: element,
+                    relatedQuestions: relatedQs
+
+                }).save()
+            }
+        })
+        res.send({ message: 'Question posted' })
+    });
 });
 
 //method for posting answers
@@ -208,7 +234,8 @@ app.post('/postanswer', (req, res) => {
         answer: req.body.answer,
         user_id: req.body.userid,
         answeredBy: req.body.answeredBy,
-        approved: false
+        approved: false,
+        rating: []
 
     }
     Question.findOne(
@@ -673,26 +700,48 @@ app.post('/getchat', async (req, res) => {
 // method for rating answers
 app.post('/rateanswer', (req, res) => {
     //  console.log(req.body.id)
-    //console.log(req.body);
-    Question.findOne({ 'answer._id': req.body.answerId}).select('answer').then((doc) => {
+    console.log(req.body);
+    Question.findOne({ 'answer._id': req.body.answerId }).select('answer').then((doc) => {
         doc.answer.forEach(ANSWER => {
-            if(ANSWER._id == req.body.answerId){
+            if (ANSWER._id == req.body.answerId) {
                 ANSWER.rating.forEach(RATING => {
-                    if(RATING.ratedBy == req.body.userid){
-                        res.send({message : 'allready rated'});
+                    if (RATING.ratedBy == req.body.userid) {
+                        res.send({ message: 'already rated' });
                         return;
                     }
-                    
+
                 });
-                ANSWER.rating.push({ratedBy : req.body.userid, ratedAs : req.body.rate});
+                ANSWER.rating.push({ ratedBy: req.body.userid, ratedAs: req.body.rate });
                 ANSWER.save();
                 res.send(doc);
-                
+
             }
         });
-          doc.save();  
-        });
+        doc.save();
     });
+});
+// method  for approving answer
+app.post('/approveAnswer', (req, res) => {
+    //console.log(req.body.orderType);
+    console.log(req.body)
+    Question.findOne({ 'answer._id' : req.body.answerId }).then((doc) => {
+        if(doc.user_id == req.body.questionBy){
+            doc.answer.forEach(ans => {
+                if(ans._id == req.body.answerId){
+                    console.log('aur suna')
+                    ans.approved = true;
+                    ans.save();
+                }
+            });
+            doc.save();
+            res.send({message : 'Done'});
+
+
+        }
+    });
+
+});
+
 
 
 
@@ -819,17 +868,46 @@ app.post('/acceptOrder', (req, res) => {
     );
 
 });
+//method for suggested Questions
+app.post('/suggestedQuestions', (req, res) => {
+    //mongoose method for finding object by id
+    let q = [];
+    Question.findOne({ '_id': req.body.questionID }).then((doc) => {
+        //sending obj to user
+        questions = []
+        doc.keywords.forEach(element => {
+            questions.push(new Promise(function (resolve, reject) {
+                var query = { keyword: element };
+                Keywords.find(query, function (err, info) {
+                    Question.find({ _id: { $in: info[0].relatedQuestions } })
+                        .then(quest => {
+                            resolve(quest);
+                        })
+                });
+            }));
+        });
+        Promise.all(questions).then(function (results) {
+            res.send(results)
+        });
+    });
+});
 
-//method for finding single contact by id
-// app.post('/Singleuser',(req,res)=>{
-//     //mongoose method for finding object by id
-//     Contact.findById(req.body.id).then((doc)=>{
-//             //sending obj to user
-//             res.send({contact : doc});
-//     },(err)=>{
-//         res.status(400).send(err);
-//     })
-// });
+
+
+function keywordsSearch(str) {
+
+    var extraction_result = keyword_extractor.extract(str, {
+        language: "english",
+        remove_digits: true,
+        return_changed_case: true,
+        remove_duplicates: true
+
+    });
+    console.log(extraction_result)
+    return extraction_result;
+}
+
+
 
 //method for listing object
 // app.get('/user',(req,res)=>{

@@ -7,6 +7,7 @@ var question = new Schema({
     user_id : String,
     askedBy : String,
     category : String,
+    keywords : [String],
     answer : [{
         answer : String,
         user_id : String,
