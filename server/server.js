@@ -3,44 +3,44 @@ var bodyParser = require('body-parser');
 const multer = require("multer");
 const HttpStatus = require('http-status-codeS');
 var keyword_extractor = require("keyword-extractor");
-
+const fs = require('fs')
 
 
 var { mongoose } = require('./db/mongoose');
 var { User } = require('./models/user');
 var { Question } = require('./models/question');
 let { Gigs } = require('./models/gigs')
-const stripe = require('stripe')('sk_test_Xglytt8jX4bP2C2zCaTGC2ZE');
-const upload = multer({ dest: "images/" });
+const stripe = require('stripe')('sk_test_tD7ONVYIktON3WD37yTJQTGi');
+//const upload = multer({ dest: "images/" });
 var { Message } = require('./models/messageModels');
 var { Conversation } = require('./models/conversation');
 var { Keywords } = require('./models/keywords');
 
-const MIME_TYPE_MAP = {
-    "image/png": "png",
-    "image/jpeg": "jpg",
-    "image/jpg": "jpg"
-};
+// const MIME_TYPE_MAP = {
+//     "image/png": "png",
+//     "image/jpeg": "jpg",
+//     "image/jpg": "jpg"
+// };
 
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const isValid = MIME_TYPE_MAP[file.mimetype];
-        let error = new Error("Invalid mime type");
-        if (isValid) {
-            error = null;
-        }
-        cb(error, "images");
-    },
-    filename: (req, file, cb) => {
-        const name = file.originalname
-            .toLowerCase()
-            .split(" ")
-            .join("-");
-        const ext = MIME_TYPE_MAP[file.mimetype];
-        cb(null, name + "-" + Date.now() + "." + ext);
-    }
-});
+// const storage = multer.diskStorage({
+//     destination: (req, file, cb) => {
+//         const isValid = MIME_TYPE_MAP[file.mimetype];
+//         let error = new Error("Invalid mime type");
+//         if (isValid) {
+//             error = null;
+//         }
+//         cb(error, "images");
+//     },
+//     filename: (req, file, cb) => {
+//         const name = file.originalname
+//             .toLowerCase()
+//             .split(" ")
+//             .join("-");
+//         const ext = MIME_TYPE_MAP[file.mimetype];
+//         cb(null, name + "-" + Date.now() + "." + ext);
+//     }
+// });
 
 var app = express();
 
@@ -94,10 +94,10 @@ app.post('/user', (req, res) => {
 app.post('/user/auth', (req, res) => {
     //mongoose method for deleting object from db
     //console.log(req.body.email);
-    console.log(req.body.password);
-    console.log(req.body.email);
+    //console.log(req.body.password);
+    // console.log(req.body.email);
     User.find({ "email": req.body.email, "password": req.body.password }).then((doc) => {
-        console.log(doc);
+        //console.log(doc);
         res.send(doc);
     }, (err) => {
         res.status(400).send(err);
@@ -121,7 +121,7 @@ app.post('/questions', (req, res) => {
         tag["user_id"] = req.body.id
     }
     //console.log(tag)
-    Question.find(tag).then((doc) => {
+    Question.find(tag).sort('_id').then((doc) => {
         doc.forEach(element => {
             // console.log(element);
             User.findOne({ _id: element.user_id }).then((user) => {
@@ -153,7 +153,7 @@ app.post('/answers', (req, res) => {
             'category': doc.category,
             answers
         }
-        if(doc.answer.length > 0){
+        if (doc.answer.length > 0) {
             doc.answer.forEach(element => {
                 score = 0;
                 element.rating.forEach((element2) => {
@@ -164,18 +164,18 @@ app.post('/answers', (req, res) => {
                         score--;
                     }
                 });
-    
+
                 result.answers.push({ answer: element, score })
                 if (result.answers.length == doc.answer.length) {
                     res.send(result);
                 }
             });
         }
-        else{
+        else {
             res.send(result);
         }
 
-     
+
 
 
 
@@ -188,7 +188,7 @@ app.post('/answers', (req, res) => {
 
 //method for posting question
 app.post('/postquestion', async (req, res) => {
-    console.log(req.body.userid);
+    // console.log(req.body.userid);
     //console.log('asdasd')
     //console.log(req.body.questionID);
 
@@ -276,11 +276,11 @@ app.post('/viewjobs', (req, res) => {
 
 //method for posting jobs
 app.post('/postjobs', (req, res) => {
-    console.log(req.body.userid);
+    //console.log(req.body.userid);
     User.findOne(
         { _id: req.body.userid }
     ).then((doc) => {
-        console.log(doc);
+        // console.log(doc);
         doc.jobs.push(req.body.job);
         doc.save((err) => {
             if (err) {
@@ -358,7 +358,7 @@ app.post('/adminDashboard', (req, res) => {
         Question.find({}).then((doc1) => {
             countquestion = doc1.length;
             doc1.forEach((element, index) => {
-                console.log(' ================ ', element.answer.length);
+                // console.log(' ================ ', element.answer.length);
                 countanswer += Number(element.answer.length);
                 if (doc1.length == index + 1) {
                     res.send({
@@ -380,7 +380,7 @@ app.post('/adminDashboard', (req, res) => {
 
 
 //method for adding gigs
-app.post('/addgig', upload.single('image'), (req, res) => {
+app.post('/addgig', (req, res) => {
     //console.log(req.body);
     var gigs = new Gigs({
         userid: req.body.userid,
@@ -448,7 +448,7 @@ app.get('/getquestiontags', (req, res) => {
 app.get('/getfreelancetags', (req, res) => {
     //  console.log(req.body.id)
     Gigs.distinct('title').then((doc) => {
-        console.log("title", doc)
+        //console.log("title", doc)
         res.send(doc);
     }, (err) => {
         res.status(400).send(err);
@@ -460,7 +460,7 @@ app.get('/getfreelancetags', (req, res) => {
 app.get('/getjobtags', (req, res) => {
     //  console.log(req.body.id)
     User.distinct('jobs.category').then((doc) => {
-        console.log("jobs.category", doc)
+        // console.log("jobs.category", doc)
         res.send(doc);
     }, (err) => {
         res.status(400).send(err);
@@ -470,27 +470,41 @@ app.get('/getjobtags', (req, res) => {
 
 app.post('/payment', async (req, res) => {
     //  console.log(req.body.id)
-    console.log(req.body.id)
+    console.log(req.body)
 
-    // stripe.transfers.create({
-    //     amount: 400,
-    //     currency: "usd",
-    //     destination: "cus_Et92lXvsTgyj5v",
-    //     transfer_group: "ORDER_95"
-    //   }, function(err, transfer) {
-    //       console.log(transfer);
-    //     // asynchronously called
-    //   });
+   
+
 
     try {
         const { status } = await stripe.charges.create({
-            amount: 2000,
+            amount: req.body.amount*100,
             currency: 'usd',
-            description: 'cus_Et92lXvsTgyj5v',
+            description: 'asdsadsd',
             source: req.body.id
-        })
+        });
+        console.log(status);
 
         if (status) {
+            User.findOne({ 'ordersAccepted._id': req.body.orderid }).then((user) => {
+                user.account.currentAmount = user.account.currentAmount + req.body.amount;
+                user.account.earnings.push({
+                    amount: req.body.amount,
+                    date: Date.now(),
+                    client_id: req.body.userid,
+                    order_id: req.body.orderid
+                })
+                user.save();
+            })
+            User.findOne({'_id':req.body.userid}).then((user)=>{
+                user.account.transactions.push({
+                    amount: req.body.amount,
+                    date: Date.now(),
+                    client_id: req.body.userid,
+                    order_id: req.body.orderid
+                })
+                user.save();
+            })
+
             res.json({ status })
         }
     } catch (e) {
@@ -547,7 +561,7 @@ app.post('/useranswers', (req, res) => {
             });
         });
         res.send(arr);
-        console.log(arr);
+        //console.log(arr);
         //res.send(doc);
     }, (err) => {
         res.status(400).send(err);
@@ -593,7 +607,7 @@ app.post('/chat', (req, res) => {
                             }
                         }
                     }).then((doc) => {
-                        console.log(doc)
+                        //console.log(doc)
                         res.status(HttpStatus.OK).json({ message: 'Message sent asd' })
                     })
                     .catch(err => res.status(HttpStatus.INTERNAL_SERVER_ERROR));
@@ -606,7 +620,7 @@ app.post('/chat', (req, res) => {
                 });
                 const saveConversation = await newConversation.save();
                 const newMessage = new Message();
-                console.log(saveConversation._id)
+                //console.log(saveConversation._id)
                 newMessage.conversationId = saveConversation._id;
                 newMessage.sender = req.body.senderName;
                 newMessage.receiver = req.body.receiverName;
@@ -668,7 +682,7 @@ app.post('/chat', (req, res) => {
 });
 
 app.post('/getchat', async (req, res) => {
-    console.log('getchat');
+    // console.log('getchat');
     const { senderId, receiverId } = req.body;
 
     const conversation = await Conversation.findOne({
@@ -700,7 +714,7 @@ app.post('/getchat', async (req, res) => {
 // method for rating answers
 app.post('/rateanswer', (req, res) => {
     //  console.log(req.body.id)
-    console.log(req.body);
+    //console.log(req.body);
     Question.findOne({ 'answer._id': req.body.answerId }).select('answer').then((doc) => {
         doc.answer.forEach(ANSWER => {
             if (ANSWER._id == req.body.answerId) {
@@ -723,18 +737,18 @@ app.post('/rateanswer', (req, res) => {
 // method  for approving answer
 app.post('/approveAnswer', (req, res) => {
     //console.log(req.body.orderType);
-    console.log(req.body)
-    Question.findOne({ 'answer._id' : req.body.answerId }).then((doc) => {
-        if(doc.user_id == req.body.questionBy){
+    //console.log(req.body)
+    Question.findOne({ 'answer._id': req.body.answerId }).then((doc) => {
+        if (doc.user_id == req.body.questionBy) {
             doc.answer.forEach(ans => {
-                if(ans._id == req.body.answerId){
-                    console.log('aur suna')
+                if (ans._id == req.body.answerId) {
+                    // console.log('aur suna')
                     ans.approved = true;
                     ans.save();
                 }
             });
             doc.save();
-            res.send({message : 'Done'});
+            res.send({ message: 'Done' });
 
 
         }
@@ -781,7 +795,7 @@ app.post('/getConversations', (req, res) => {
 
 //method for submitting order
 app.post('/submitOrder', (req, res) => {
-    console.log(req.body);
+    //console.log(req.body);
     User.update({
         _id: req.body.receiverid
     },
@@ -796,7 +810,8 @@ app.post('/submitOrder', (req, res) => {
                             description: req.body.order.order_description,
                             amount: req.body.order.order_price,
                             time_limit: req.body.order.order_delivery_time,
-                            dispute_id: null
+                            dispute_id: null,
+                            completed: false
                         }
                     ]
                     ,
@@ -829,6 +844,76 @@ app.post('/getPendingOrders', (req, res) => {
     });
 
 });
+// method for fetching my orders
+app.post('/getMyOrders', (req, res) => {
+    //console.log(req.body.orderType);
+    User.findOne({ '_id': req.body.userid }).then((doc) => {
+        res.send({
+            ordersAccepted: doc.myOrders,
+            ordersReceived: doc.ordersReceived
+        });
+    });
+
+});
+//method for delivering orders
+var storage1 = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'public')
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + "-" + file.originalname)
+    }
+})
+
+var upload2 = multer({ storage: storage1 })
+app.post('/deliverOrder', upload2.single('file'), (req, res) => {
+
+
+    console.log(req.file)
+
+    var address = "/public/" + req.file.filename
+
+    User.findOne({ '_id': req.body.userid }).then((user) => {
+        user.ordersReceived.push({
+            deliveredBy: req.body.myid,
+            orderid: req.body.orderid,
+            orderName: req.file.filename,
+            orderFile: address
+        })
+        user.save();
+        User.findOne({ '_id': req.body.myid }).select('ordersAccepted').then((orders) => {
+            orders.ordersAccepted.forEach(order => {
+                console.log(order._id, req.body.orderid)
+                if (order._id == req.body.orderid) {
+                    order.completed = true;
+                }
+            });
+            orders.save();
+        })
+
+    });
+
+    res.send({ message: 'Oka done' })
+});
+app.get('/public/:file', function (req, res) {
+    file = req.params.file;
+
+    var filePath = "public/" + file
+
+
+    fs.exists(filePath, function (exists) {
+        if (exists) {
+            // Content-type is very interesting part that guarantee that
+            // Web browser will handle response in an appropriate manner.
+            res.download(filePath)
+        } else {
+            res.writeHead(400, { "Content-Type": "text/plain" });
+            res.end("ERROR File does not exist");
+        }
+    });
+
+
+});
 //method for accepting order
 app.post('/acceptOrder', (req, res) => {
     // console.log(req.body)
@@ -857,6 +942,11 @@ app.post('/acceptOrder', (req, res) => {
                 if (req.body.requestType == "accept") {
                     doc.ordersAccepted.push(tem[0]);
                     doc.save();
+                    User.findOne({ '_id': tem[0].userid }).then((user) => {
+                        //console.log(user, "-------------------------------------");
+                        user.myOrders.push(tem[0]);
+                        user.save();
+                    })
                 }
                 res.send({ message: "Orders updated" });
 
