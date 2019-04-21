@@ -4,6 +4,7 @@ const multer = require("multer");
 const HttpStatus = require('http-status-codeS');
 var keyword_extractor = require("keyword-extractor");
 const fs = require('fs')
+var dateFormat = require('dateformat');
 
 
 var { mongoose } = require('./db/mongoose');
@@ -205,6 +206,10 @@ app.post('/postquestion', async (req, res) => {
     const savedQuestion = await question.save();
     let relatedQs = [];
     relatedQs.push(savedQuestion._id);
+    User.findOne({ '_id': req.body.userid }).then((user) => {
+        user.questions.push({ id: savedQuestion._id })
+        user.save();
+    })
     questionKeywords.forEach(element => {
         Keywords.findOne({ keyword: element }).then((kw) => {
             if (kw) {
@@ -243,15 +248,12 @@ app.post('/postanswer', (req, res) => {
     ).then((doc) => {
         console.log(doc);
         doc.answer.push(answer);
-        doc.save((err) => {
-            if (err) {
-                res.status(400).send(err);
-            }
-            else {
-                console.log("saved");
-            }
-
-        });
+       var a =  doc.answer[doc.answer.length-1]._id
+        doc.save();
+        User.findOne({'_id':req.body.userid}).then((user)=>{
+            user.answers.push({id : a})
+            user.save()
+        })
         res.send(doc);
     }, (err) => {
         res.status(400).send(err);
@@ -271,6 +273,65 @@ app.post('/viewjobs', (req, res) => {
         res.send(arr);
     }, (err) => {
         res.status(400).send(err);
+    })
+});
+//method for fetching my jobs
+app.post('/myjobs', (req, res) => {
+    User.findOne({ '_id': req.body.userid }).then((user) => {
+        res.send(user.jobs);
+    })
+});
+// method for fetching applicants
+app.post('/getapplicants', (req, res) => {
+    let applicants = []
+    User.findOne({ 'jobs._id': req.body.jobID }).then((user) => {
+        user.jobs.forEach(job => {
+            if (job._id == req.body.jobID) {
+                job.applied.forEach(applicant => {
+                    User.findOne({ '_id': applicant.user_id }).then((user) => {
+                        applicants.push(user);
+                        if (job.applied.length == applicants.length) {
+                            res.send(applicants)
+                        }
+                    })
+                });
+            }
+        });
+    })
+});
+
+//method for job apply
+app.post('/applyjob', (req, res) => {
+
+    User.findOne({ 'jobs._id': req.body.jobID }).then((user) => {
+        console.log(req.body)
+        if (user._id == req.body.userid) {
+            res.send({ message: 'You cannot apply for your own job' })
+        }
+        else {
+            user.jobs.forEach(job => {
+                if (job._id == req.body.jobID) {
+                   if(job.applied){
+                       job.applied.forEach(applicant => {
+                           if(applicant.user_id == req.body.userid){
+                               res.send({message : 'You have already applied'})
+                           }
+                       });
+                       job.applied.push({user_id : req.body.userid});
+                       job.save()
+                       res.send({message : 'Your application is submitted'})
+                   }
+                   else{
+                    job.applied.push({user_id : req.body.userid});
+                    job.save()
+                    res.send({message : 'Your application is submitted'})
+                   }
+                }
+                user.save();
+
+            });
+
+        }
     })
 });
 
@@ -380,7 +441,7 @@ app.post('/adminDashboard', (req, res) => {
 
 
 //method for adding gigs
-app.post('/addgig', (req, res) => {
+app.post('/addgig', async (req, res) => {
     //console.log(req.body);
     var gigs = new Gigs({
         userid: req.body.userid,
@@ -389,19 +450,16 @@ app.post('/addgig', (req, res) => {
         description: req.body.gig.gig_description,
         photo: req.body.image,
         rate: req.body.gig.gig_rate,
-        reviews: [{
-            order_id: null,
-            user_id: null,
-            client_id: null,
-            reviews_rating: null,
-            comment: null
-        }]
+        reviews: []
     })
-    gigs.save().then((doc) => {
-        res.send(doc)
-    }, () => {
-        res.send("error");
+    const savedGig = await gigs.save()
+    User.findOne({ '_id': req.body.userid }).then((user) => {
+        user.gigs.push({
+            id: savedGig._id
+        })
+        user.save()
     })
+   res.send(savedGig)
 
 
 });
@@ -430,6 +488,22 @@ app.post('/gigdetail', (req, res) => {
         res.status(400).send(err);
     })
 
+});
+//method for adding reviews
+app.post('/addreview', (req, res) => {
+     //console.log(req.body)
+     User.findOne({'_id':req.body.client_id}).select({'username':1, '_id':0}).then((us)=>{
+         Gigs.findOne({'_id':req.body.gigid}).then((gig)=>{
+             gig.reviews.push({
+                order_id : req.body.orderid,
+                client_id : us.username,
+                reviews_rating : req.body.reviews_rating,
+                comment : req.body.comment
+             })
+             gig.save();
+             res.send({message : 'Review added'})
+         })
+     })
 });
 
 //method for fetching question tags
@@ -471,13 +545,17 @@ app.get('/getjobtags', (req, res) => {
 app.post('/payment', async (req, res) => {
     //  console.log(req.body.id)
     console.log(req.body)
+    var deliveredUserName;
+    var gigname;
+    Gigs.findOne({ '_id': req.body.gigid }).then((gig) => {
+        gigname = gig.title;
 
-   
+    });
 
 
     try {
         const { status } = await stripe.charges.create({
-            amount: req.body.amount*100,
+            amount: req.body.amount * 100,
             currency: 'usd',
             description: 'asdsadsd',
             source: req.body.id
@@ -486,21 +564,22 @@ app.post('/payment', async (req, res) => {
 
         if (status) {
             User.findOne({ 'ordersAccepted._id': req.body.orderid }).then((user) => {
+                deliveredUserName = user.username
                 user.account.currentAmount = user.account.currentAmount + req.body.amount;
                 user.account.earnings.push({
                     amount: req.body.amount,
-                    date: Date.now(),
+                    date: dateFormat(),
                     client_id: req.body.userid,
-                    order_id: req.body.orderid
+                    gig_name: gigname
                 })
                 user.save();
             })
-            User.findOne({'_id':req.body.userid}).then((user)=>{
+            User.findOne({ '_id': req.body.userid }).then((user) => {
                 user.account.transactions.push({
                     amount: req.body.amount,
                     date: Date.now(),
-                    client_id: req.body.userid,
-                    order_id: req.body.orderid
+                    client_id: deliveredUserName,
+                    gig_name: gigname
                 })
                 user.save();
             })
@@ -844,6 +923,14 @@ app.post('/getPendingOrders', (req, res) => {
     });
 
 });
+//method for fetching account details
+app.post('/getAccountDetails', (req, res) => {
+    //console.log(req.body.orderType);
+    User.findOne({ '_id': req.body.userid }).then((doc) => {
+        res.send(doc.account);
+    });
+
+});
 // method for fetching my orders
 app.post('/getMyOrders', (req, res) => {
     //console.log(req.body.orderType);
@@ -878,7 +965,8 @@ app.post('/deliverOrder', upload2.single('file'), (req, res) => {
             deliveredBy: req.body.myid,
             orderid: req.body.orderid,
             orderName: req.file.filename,
-            orderFile: address
+            orderFile: address,
+            gig_id : req.body.gigid
         })
         user.save();
         User.findOne({ '_id': req.body.myid }).select('ordersAccepted').then((orders) => {

@@ -11,9 +11,8 @@ var gigs = new Schema({
     rate : String,
     reviews : [{
         order_id : String,
-        user_id : String,
         client_id : String,
-        reviews_rating : String,
+        reviews_rating : Number,
         comment : String
     }]
 

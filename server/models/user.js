@@ -19,14 +19,14 @@ var User = new Schema({
             amount: Number,
             date: Date,
             client_id: String,
-            order_id: String
+            gig_name: String
         }],
         transactions: [
             {
                 amount: Number,
                 date: Date,
                 client_id: String,
-                order_id: String
+                gig_name: String
             }
         ]
 
@@ -72,7 +72,8 @@ var User = new Schema({
         deliveredBy: String,
         orderid: String,
         orderName: String,
-        orderFile: String
+        orderFile: String,
+        gig_id: String
 
     }],
     gigs: [{
