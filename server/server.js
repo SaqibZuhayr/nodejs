@@ -5,7 +5,7 @@ const HttpStatus = require('http-status-codeS');
 var keyword_extractor = require("keyword-extractor");
 const fs = require('fs')
 var dateFormat = require('dateformat');
-
+var natural = require('natural');
 
 var { mongoose } = require('./db/mongoose');
 var { User } = require('./models/user');
@@ -1050,8 +1050,10 @@ app.post('/acceptOrder', (req, res) => {
 app.post('/suggestedQuestions', (req, res) => {
     //mongoose method for finding object by id
     let q = [];
+    var questionFound;
     Question.findOne({ '_id': req.body.questionID }).then((doc) => {
         //sending obj to user
+        questionFound = doc;
         questions = []
         doc.keywords.forEach(element => {
             questions.push(new Promise(function (resolve, reject) {
@@ -1065,7 +1067,15 @@ app.post('/suggestedQuestions', (req, res) => {
             }));
         });
         Promise.all(questions).then(function (results) {
-            res.send(results)
+            results.forEach(questionArray => {
+                questionArray.forEach(ques => {
+                    if(natural.JaroWinklerDistance(questionFound.question , ques.question)> 0.5){
+                        q.push(ques)
+                    }
+                });
+                res.send(q);
+            });
+           
         });
     });
 });
@@ -1096,8 +1106,7 @@ function keywordsSearch(str) {
 //         res.status(400).send(err);
 //     })
 // });
-
-
+console.log(natural.JaroWinklerDistance("name scripting languages","what is scripting"));
 server.listen(3000, () => {
     console.log('Server started on 3000')
 })
