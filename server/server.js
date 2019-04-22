@@ -81,16 +81,22 @@ app.post('/user', (req, res) => {
     })
 });
 
-//method for deleting contact
-// app.post('/delete',(req,res)=>{
-//     //mongoose method for deleting object from db
-//     Contact.findByIdAndRemove(req.body.id).then((doc)=>{
-//         //returning deleted object to user
-//         res.send(doc);
-// },(err)=>{
-//     res.status(400).send(err);
-// })
-// });
+//method for updating user
+app.post('/updateprofile',(req,res)=>{
+    //mongoose method for updating object from db
+    console.log(req.body)
+    User.updateOne({'_id': req.body.userid}, {$set : 
+        {'first_name' : req.body.userdetail.firstext,
+         'last_name' : req.body.userdetail.lasttext,
+         'email' : req.body.userdetail.emailtext,
+         'username': req.body.userdetail.usertext,
+         'password' : req.body.userdetail.passtext
+        } 
+}).then(doc =>{
+    res.send({message : 'Updated Profile'})
+})
+    
+});
 //User login authentication
 app.post('/user/auth', (req, res) => {
     //mongoose method for deleting object from db
@@ -1095,7 +1101,13 @@ function keywordsSearch(str) {
     return extraction_result;
 }
 
+app.post('/userdetails', (req, res) => {
+    //console.log(req.body.orderType);
+    User.findOne({ '_id': req.body.userid }).then((doc) => {
+        res.send(doc);
+    });
 
+});
 
 //method for listing object
 // app.get('/user',(req,res)=>{

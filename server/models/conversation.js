@@ -7,7 +7,6 @@ const ConversationSchema = mongoose.Schema({
             receiverId : {type: mongoose.Schema.Types.ObjectId, ref: 'Users'}
         }
     ]
-
 });
   var Conversation = mongoose.model('Conversation',ConversationSchema);
   module.exports={Conversation};
